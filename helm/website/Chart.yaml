@@ -7,6 +7,6 @@ type: application
 version: 2.2.0
 
 maintainers:
-  - name: RomainPigeyre
-    email: romain.pigeyre@soprasteria.com
+  - name: GuillaumeMorini
+    email: morini@google.com
     url:

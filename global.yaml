@@ -2,8 +2,8 @@ application:
   name: demo
   gcpLabels:
     environment: demo
-    organisation: sopra
-    projectManager: rpigeyre
+    organisation: google
+    projectManager: morini
     projectName: demo
     
 ingress:
