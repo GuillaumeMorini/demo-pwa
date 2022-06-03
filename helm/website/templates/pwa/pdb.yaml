@@ -1,0 +1,17 @@
+{{- if .Values.pwa }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "release.fullname" . }}-pwa-pdb
+  labels:
+    {{- include "release.labels" . | nindent 4 }}
+    {{- include "pwa.labels" . | nindent 4 }}
+    {{- include "pwa.selectorLabels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pwa.components.scaling.minAvailableDuringUpdate | default 1 }}
+  selector:
+    matchLabels:
+      app: website
+      tier: frontend
+      release: {{ .Release.Name }}
+{{- end }}

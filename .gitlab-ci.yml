@@ -1,0 +1,13 @@
+deploy: 
+    image: google/cloud-sdk:latest
+    before_script:
+        - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    script:
+        - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS --project=gmo-onboarding
+        - gcloud container clusters get-credentials gmo-autopilot-cluster-1 --region europe-west1
+        - helm upgrade --install "demo" ./helm/website --set application.deploymentVersion="$(date +'%s')" -f ./global.yaml -f ./pwa.yaml --namespace="default" --disable-openapi-validation --atomic
+        - kubectl -n default rollout status deployment.apps/demo-website-pwa-deployment
+
+
+
+

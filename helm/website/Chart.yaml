@@ -1,0 +1,12 @@
+---
+apiVersion: v2
+name: website
+
+type: application
+
+version: 2.2.0
+
+maintainers:
+  - name: RomainPigeyre
+    email: romain.pigeyre@soprasteria.com
+    url:

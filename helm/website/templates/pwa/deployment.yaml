@@ -1,0 +1,104 @@
+{{- if .Values.pwa }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "release.fullname" . }}-pwa-deployment
+  labels:
+    {{- include "release.labels" . | nindent 4 }}
+    {{- include "pwa.labels" . | nindent 4 }}
+    {{- include "pwa.selectorLabels" . | nindent 4 }}
+    imageTag: {{ $.Values.pwa.components.image.tag }}
+spec:
+  {{- if .Values.pwa.components.scaling.minReplicas }}
+  replicas: 1
+  {{- end }}
+  strategy:
+    rollingUpdate:
+      maxUnavailable: {{ .Values.pwa.components.deployment.maxUnavailable | default "25%" }}
+      maxSurge: {{ .Values.pwa.components.deployment.maxSurge | default "25%" }}
+  selector:
+    matchLabels:
+      app: website
+      tier: frontend
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "release.labels" . | nindent 8 }}
+        {{- include "pwa.labels" . | nindent 8 }}
+        {{- include "pwa.selectorLabels" . | nindent 8 }}
+        imageTag: {{ $.Values.pwa.components.image.tag }}      
+      annotations:
+        # Use to refresh deployment in case of value change from config or secret
+        checksum/config: {{ include (print $.Template.BasePath "/pwa/configmap.yaml") . | sha256sum }}
+    spec:
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: "app"
+                      operator: In
+                      values:
+                        - website
+                    - key: "tier"
+                      operator: In
+                      values:
+                        - frontend
+                topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: pwa-{{ .Release.Name }}
+          image: nginx:latest
+          imagePullPolicy: {{ .Values.pwa.components.image.pullPolicy | default "IfNotPresent" }}
+          restartPolicy: OnFailure
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/usr/sbin/nginx","-s","quit"]
+          livenessProbe:
+            failureThreshold: {{ .Values.pwa.probes.liveness.failureThreshold | default 3 }}
+            httpGet:
+              path: {{ .Values.pwa.probes.liveness.path | default "/" }}
+              port: {{ .Values.pwa.probes.liveness.port | default 4000 }}
+            initialDelaySeconds: {{ .Values.pwa.probes.liveness.initialDelaySeconds | default 3 }}
+            periodSeconds: {{ .Values.pwa.probes.liveness.periodSeconds | default 3 }}
+            timeoutSeconds: {{ .Values.pwa.probes.liveness.timeoutSeconds | default 1 }}
+          readinessProbe:
+            failureThreshold: {{ .Values.pwa.probes.readiness.failureThreshold | default 3 }}
+            httpGet:
+              path: {{ .Values.pwa.probes.readiness.path | default "/" }}
+              port: {{ .Values.pwa.probes.readiness.port | default 4000 }}
+            initialDelaySeconds: {{ .Values.pwa.probes.readiness.initialDelaySeconds | default 3 }}
+            periodSeconds: {{ .Values.pwa.probes.readiness.periodSeconds | default 3 }}
+            timeoutSeconds: {{ .Values.pwa.probes.readiness.timeoutSeconds | default 1 }}
+          resources:
+            # With GKE Autopilot requests = limits
+            requests:
+              cpu: {{ .Values.pwa.resources.cpu | default "750m" }}
+              memory: {{ .Values.pwa.resources.memory | default "2Gi" }}
+              ephemeral-storage: {{ .Values.pwa.resources.ephemeralStorage | default "1Gi" }}
+            limits:
+              cpu: {{ .Values.pwa.resources.cpu | default "750m" }}
+              memory: {{ .Values.pwa.resources.memory | default "2Gi" }}
+              ephemeral-storage: {{ .Values.pwa.resources.ephemeralStorage | default "1Gi" }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.pwa.components.containerPort | default 4000 }}
+              protocol: TCP
+          volumeMounts:
+          {{- range $volumeMount := .Values.pwa.volumes }}
+            - name: {{ $volumeMount.name }}-volume
+              mountPath: {{ $volumeMount.mountPath }}
+              {{- if eq $volumeMount.mountType "file" }}
+              subPath: {{ base $volumeMount.mountPath }}
+              {{- end }}
+          {{- end }}
+      volumes:
+        {{- $resourcePrefix := include "release.fullname" . }}
+      {{- range $volumeDefinition := .Values.pwa.volumes }}
+        {{- include "volume.definition" ( dict "componentName" "pwa" "spec" $volumeDefinition "resourcePrefix" $resourcePrefix ) | nindent 8 }}
+      {{- end }}
+{{- end }}

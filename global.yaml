@@ -1,0 +1,12 @@
+application:
+  name: demo
+  gcpLabels:
+    environment: demo
+    organisation: sopra
+    projectManager: rpigeyre
+    projectName: demo
+    
+ingress:
+  - path: "/*"
+    componentName: pwa
+  

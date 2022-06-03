@@ -1,0 +1,78 @@
+pwa:
+
+  components:
+    scaling:
+      minAvailableDuringUpdate: 1
+      minReplicas: 1
+      maxReplicas: 2
+      targetCPUUtilizationPercentage: 60
+      targetMemoryUtilizationPercentage: 60
+      stabilizationWindowSeconds: 300
+    deployment:
+      maxUnavailable: 25%
+      maxSurge: 100%
+    image:
+      pullPolicy: Always
+    containerPort: 80
+
+  # Configuration to enable Cloud CDN
+  cdn:
+    enabled: true
+    cacheMode: FORCE_CACHE_ALL
+
+  # Good documentation to configure these probes : https://blog.colinbreck.com/kubernetes-liveness-and-readiness-probes-how-to-avoid-shooting-yourself-in-the-foot/
+  probes:
+    # Définit la politique de redémarrage du pod
+    # ####################################################
+    # Don't check dependency inside this probe. The software would restore connection to dependencies by itself. We are just expecting that the component is available on liveness probe
+    liveness:
+      # Must be high to avoid cascading failure during temporary load change
+      failureThreshold: 8
+      port: 80
+      path: /
+      # Must be align to readiness start time
+      initialDelaySeconds: 10
+      periodSeconds: 15
+      # Must be align to client timeout
+      timeoutSeconds: 15
+    # Définit la politique de désactivation du pod de la répartition de charge (par défaut désactivité au démarrage)
+    # ####################################################
+    # Must include dependencies (ex: database) to change state if request result is not functional.
+    readiness:
+      # Must be high to avoid cascading failure during temporary load change
+      failureThreshold: 6
+      port: 80
+      path: /
+      initialDelaySeconds: 2
+      periodSeconds: 10
+      # Must be align to dependency timeout (if existing)
+      timeoutSeconds: 5
+
+  resources:
+    cpu: 500m
+    memory: 512Mi
+
+  volumes:
+    - name: nginx-config
+      mountPath: /etc/nginx/nginx.conf
+      mountType: file
+      volumeFileType: configMap
+      data: |-
+        user  nginx;
+        worker_processes  auto;
+        error_log  /var/log/nginx/error.log notice;
+        pid        /var/run/nginx.pid;
+        events {
+            worker_connections  1024;
+        }
+        http {
+            include       /etc/nginx/mime.types;
+            default_type  application/octet-stream;
+            log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+            access_log  /dev/stdout  main;
+            sendfile        on;
+            keepalive_timeout  620;
+            include /etc/nginx/conf.d/*.conf;
+        }

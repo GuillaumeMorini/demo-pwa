@@ -1,0 +1,22 @@
+{{- if .Values.pwa }}
+{{- range $volumeDefinition := .Values.pwa.volumes }}
+{{- if $volumeDefinition.volumeFileType }}
+{{- if eq $volumeDefinition.volumeFileType "configMap" }}
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "release.fullname" $ }}-pwa-{{ $volumeDefinition.name }}-configmap
+  labels:
+    {{- include "release.labels" $ | nindent 4 }}
+    {{- include "pwa.labels" $ | nindent 4 }}
+    {{- include "pwa.selectorLabels" $ | nindent 4 }}
+data:
+  {{ base $volumeDefinition.mountPath }}: |
+    {{ $volumeDefinition.data | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+  

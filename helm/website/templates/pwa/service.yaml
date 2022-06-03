@@ -1,0 +1,27 @@
+{{- if .Values.pwa }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "release.fullname" . }}-http-pwa-service
+  labels:
+    {{- include "release.labels" . | nindent 4 }}
+    {{- include "pwa.labels" . | nindent 4 }}
+    {{- include "pwa.selectorLabels" . | nindent 4 }}
+  annotations:
+    cloud.google.com/neg: '{"ingress": false}'
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: {{ .Values.pwa.components.containerPort | default 4000 }}
+      protocol: TCP
+      name: http
+  externalTrafficPolicy: Local # Show Client IP
+  selector:
+    app: website
+    tier: frontend
+    release: {{ .Release.Name }}
+{{- end }}
+
+
+
