@@ -2,9 +2,16 @@
 
 ## Deploy
 
-export GOOGLE_APPLICATION_CREDENTIALS="./sa.json"
-gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS --project=$PROJECT
+gcloud auth login
+
+gcloud config set project $PROJECT
+
+gcloud compute addresses create demo-static-external-ip --global
+
+gcloud container clusters get-credentials gmo-autopilot-cluster-1 --region europe-west1
+
 helm upgrade --install "demo" ./helm/website --set application.deploymentVersion="$(date +'%s')" -f ./global.yaml -f ./pwa.yaml --namespace="default" --disable-openapi-validation --atomic
+
 kubectl -n default rollout status deployment.apps/demo-website-pwa-deployment
 
 ## Test
